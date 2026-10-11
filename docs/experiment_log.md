@@ -416,3 +416,53 @@ The results support the inclusion of independent validation and checkpoint manag
 ### Future Work
 
 Investigate controller robustness to altered initial conditions and observation disturbances. Compare the original DQN against algorithmic improvements such as Double DQN only if a controlled comparison is warranted.
+
+## EXP-008 — DQN Controller Robustness Analysis
+
+### Objective
+
+Evaluate the sensitivity of the validation-selected DQN controller to observation noise and variations in initial system states.
+
+### Hypothesis
+
+Although the selected DQN achieves the maximum return under nominal CartPole-v1 conditions, its performance may deteriorate under measurement uncertainty or initial conditions outside the standard reset distribution.
+
+### Experimental Setup
+
+**Controller**
+- Algorithm: DQN
+- Checkpoint: Best model from training seed 42
+- Evaluation policy: Greedy (epsilon = 0)
+- Environment: CartPole-v1
+
+**Observation Noise**
+- Distribution: Independent additive Gaussian noise
+- Standard deviations: 0, 0.01, 0.025, 0.05, 0.1
+- Episodes per noise level: 100
+- Environment seeds: 40000–40099
+
+**Initial-Condition Variation**
+- Cart positions: −1.5, −0.75, 0, 0.75, 1.5 m
+- Pole angles: −10°, −5°, 0°, 5°, 10°
+- Initial velocities: 0
+- Number of scenarios: 25
+
+### Evaluation Metrics
+
+- Mean episode return
+- Standard deviation of episode returns
+- Success rate (return = 500)
+- Maximum absolute cart position
+- Maximum absolute pole angle
+
+### Results
+
+Pending execution.
+
+### Analysis
+
+To be completed after inspecting the noise-sensitivity plot and initial-condition heatmap.
+
+### Limitations
+
+The observation-noise standard deviation is identical numerically across state components with different physical units. The initial-condition analysis covers a discrete grid, not the full state space. No physical disturbances or changes to the environment dynamics are introduced.
