@@ -15,6 +15,7 @@ import numpy as np
 import torch
 
 from rlcontrol.agent import DQNAgent
+from rlcontrol.validation import evaluate_model, CheckpointManager
 
 
 def set_seed(seed: int) -> None:
@@ -60,6 +61,52 @@ def save_learning_curve(rewards, output_path: Path) -> None:
     plt.close()
 
 
+def save_validation_curve(records, output_path: Path):
+    """Plot greedy-policy validation performance."""
+
+    episodes = [r["episode"] for r in records]
+    means = [r["mean_return"] for r in records]
+    stds = [r["std_return"] for r in records]
+
+    means = np.asarray(means)
+    stds = np.asarray(stds)
+
+    plt.figure(figsize=(10, 5))
+
+    plt.plot(
+        episodes,
+        means,
+        marker="o",
+        markersize=3,
+        label="Validation mean",
+    )
+
+    plt.fill_between(
+        episodes,
+        np.maximum(0, means - stds),
+        np.minimum(500, means + stds),
+        alpha=0.2,
+        label="Mean ± 1 standard deviation",
+    )
+
+    plt.axhline(
+        500,
+        linestyle="--",
+        color="gray",
+        label="Maximum CartPole return",
+    )
+
+    plt.xlabel("Training episode")
+    plt.ylabel("Greedy-policy return")
+    plt.title("DQN Validation Performance")
+    plt.ylim(0, 520)
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=180)
+    plt.close()
+
+
 def train(
     episodes: int = 600,
     seed: int = 42,
@@ -95,6 +142,9 @@ def train(
         "epsilon_end": 0.05,
         "epsilon_decay_steps": 20_000,
         "device": "cpu",
+        "validation_frequency": 20,
+        "validation_episodes": 20,
+        "validation_seed": 20_000,
     }
 
     agent = DQNAgent(
@@ -106,6 +156,9 @@ def train(
         seed=seed,
         device=config["device"],
     )
+
+    checkpoint_manager = CheckpointManager(checkpoints_dir)
+    validation_records = []
 
     env = gym.make(config["environment"])
     env.action_space.seed(seed)
@@ -172,6 +225,38 @@ def train(
                     f"Epsilon: {epsilon:.3f} | "
                     f"Steps: {global_step}"
                 )
+
+            if episode % config["validation_frequency"] == 0:
+                validation = evaluate_model(
+                    agent.policy_network,
+                    episodes=config["validation_episodes"],
+                    seed=config["validation_seed"],
+                )
+
+                score = validation["mean_return"]
+
+                improved = checkpoint_manager.update_best(
+                    model=agent.policy_network,
+                    episode=episode,
+                    score=score,
+                    config=config,
+                )
+
+                validation_records.append(
+                    {
+                        "episode": episode,
+                        **validation,
+                        "is_best": improved,
+                    }
+                )
+
+                print(
+                    f"  Validation | Mean: {score:.2f} | "
+                    f"Std: {validation['std_return']:.2f} | "
+                    f"Best: {checkpoint_manager.best_score:.2f}"
+                    + (" | NEW BEST" if improved else "")
+                )
+
     finally:
         env.close()
 
@@ -200,6 +285,23 @@ def train(
         writer.writeheader()
         writer.writerows(records)
 
+    validation_csv = metrics_dir / "validation.csv"
+
+    with validation_csv.open("w", newline="") as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=[
+                "episode",
+                "mean_return",
+                "std_return",
+                "min_return",
+                "max_return",
+                "is_best",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(validation_records)
+
     with (metrics_dir / "config.json").open("w") as file:
         json.dump(config, file, indent=2)
 
@@ -207,6 +309,23 @@ def train(
         episode_rewards,
         figures_dir / "training_curve.png",
     )
+
+
+    if validation_records:
+        save_validation_curve(
+            validation_records,
+            figures_dir / "validation_curve.png",
+        )
+
+        print(
+            f"Best validation mean: "
+            f"{checkpoint_manager.best_score:.2f}"
+        )
+        print(
+            f"Best checkpoint episode: "
+            f"{checkpoint_manager.best_episode}"
+        )
+
 
     print("\nTraining complete.")
     print(f"Mean reward (last 20): {np.mean(episode_rewards[-20:]):.2f}")

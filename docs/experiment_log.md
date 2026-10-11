@@ -255,3 +255,38 @@ Periodic checkpointing and independent validation are therefore necessary to ide
 ### Next Steps
 
 Implement periodic checkpoint saving, validation-based model selection, and independent final testing. Preserve the original DQN algorithm to provide a controlled comparison.
+
+## EXP-006 — Validation-Based DQN Checkpoint Selection
+
+### Objective
+
+Investigate whether periodic greedy-policy validation can identify stronger intermediate DQN checkpoints and mitigate the effect of training instability.
+
+### Hypothesis
+
+A model selected by its validation performance may achieve better independent test performance than the final training checkpoint.
+
+### Experimental Setup
+
+- Environment: CartPole-v1
+- Algorithm: DQN
+- Training episodes: 1,200
+- Training seed: 42
+- Validation frequency: Every 20 episodes
+- Validation episodes per checkpoint: 20
+- Validation seeds: 20000–20019
+- Final test seeds: 30000–30099
+- Model selection criterion: Highest mean validation return
+- Saved models: Best validation checkpoint and final checkpoint
+
+### Results
+
+To be completed after training and evaluation.
+
+### Analysis
+
+To be completed after comparing training returns, validation performance, and independent test results.
+
+### Conclusion
+
+To be completed after the experiment.
