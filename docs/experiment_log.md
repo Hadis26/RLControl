@@ -256,37 +256,163 @@ Periodic checkpointing and independent validation are therefore necessary to ide
 
 Implement periodic checkpoint saving, validation-based model selection, and independent final testing. Preserve the original DQN algorithm to provide a controlled comparison.
 
-## EXP-006 — Validation-Based DQN Checkpoint Selection
+## EXP-006 — Validation-Based Checkpoint Selection
 
 ### Objective
 
-Investigate whether periodic greedy-policy validation can identify stronger intermediate DQN checkpoints and mitigate the effect of training instability.
-
-### Hypothesis
-
-A model selected by its validation performance may achieve better independent test performance than the final training checkpoint.
+Investigate whether periodic validation can identify a stronger intermediate DQN policy than the model obtained at the end of training.
 
 ### Experimental Setup
 
-- Environment: CartPole-v1
 - Algorithm: DQN
+- Environment: CartPole-v1
 - Training episodes: 1,200
 - Training seed: 42
-- Validation frequency: Every 20 episodes
-- Validation episodes per checkpoint: 20
+- Validation interval: Every 20 episodes
+- Validation episodes: 20
 - Validation seeds: 20000–20019
-- Final test seeds: 30000–30099
-- Model selection criterion: Highest mean validation return
-- Saved models: Best validation checkpoint and final checkpoint
+- Independent test episodes: 100
+- Independent test seeds: 30000–30099
+- Model selection: Highest greedy-policy validation mean
 
 ### Results
 
-To be completed after training and evaluation.
+The best model was selected at training episode **780**, achieving a validation mean return of **500.00**.
 
-### Analysis
+Independent test results:
 
-To be completed after comparing training returns, validation performance, and independent test results.
+| Metric | Random | Final DQN | Best DQN |
+|---|---:|---:|---:|
+| Mean return | 22.95 | 158.08 | 500.00 |
+| Standard deviation | 11.56 | 48.59 | 0.00 |
+| Minimum return | 10 | 118 | 500 |
+| Maximum return | 66 | 230 | 500 |
+
+The validation-selected checkpoint achieved the maximum CartPole-v1 return in all 100 independent test episodes.
+
+Its mean return was approximately 3.16 times that of the final DQN checkpoint.
+
+### Observations
+
+The best checkpoint occurred at episode 780, despite subsequent training episodes occasionally achieving very high returns.
+
+This demonstrates that epsilon-greedy training returns are not reliable indicators of greedy-policy performance.
+
+Furthermore, continued optimization after episode 780 produced a final policy with substantially worse independent test performance.
+
+The experiment provides evidence that the DQN training process is susceptible to policy degradation and that periodic validation can identify intermediate policies worth preserving.
 
 ### Conclusion
 
-To be completed after the experiment.
+Validation-based checkpoint selection substantially improved the quality of the retained controller in this experiment.
+
+The best checkpoint achieved a mean return of 500.00 with zero observed variability across 100 held-out evaluation episodes.
+
+The results support using periodic independent validation and best-checkpoint preservation rather than relying exclusively on the final training checkpoint.
+
+### Limitations
+
+The experiment involved only one independent training run.
+
+The validation set contained 20 initial conditions, and model selection was based on these conditions. Although the selected policy subsequently achieved maximum performance on 100 unseen test seeds, broader reliability requires evaluation across multiple training seeds and potentially additional environment conditions.
+
+A return of 500 represents the Gymnasium episode limit and does not establish stability beyond that horizon.
+
+## EXP-007 — Multi-Seed Reproducibility Study
+
+### Objective
+
+Evaluate the reliability of the DQN learning algorithm across multiple independent training runs.
+
+### Research Question
+
+Does validation-based checkpoint selection consistently produce successful CartPole controllers across different training seeds?
+
+### Experimental Setup
+
+- Algorithm: DQN
+- Environment: CartPole-v1
+- Training seeds: 42, 123, 456, 789, 2026
+- Training episodes: 1,200 per seed
+- Validation frequency: Every 20 episodes
+- Validation episodes: 20
+- Validation seeds: 20000–20019
+- Independent test episodes: 100 per checkpoint
+- Test seeds: 30000–30099
+- Model selection: Highest validation mean
+- Checkpoints: Best and final
+
+### Evaluation Metrics
+
+1. Mean return per trained policy.
+2. Standard deviation across evaluation episodes.
+3. Success rate (fraction of episodes reaching 500).
+4. Variability in mean returns across independent training runs.
+5. Training episode at which the best checkpoint was selected.
+
+### Results
+
+Five independent DQN training runs were evaluated using 100 held-out CartPole-v1 episodes per checkpoint.
+
+| Training Seed | Best Mean | Final Mean | Best Success Rate |
+|---|---:|---:|---:|
+| 42 | 500.00 | 158.08 | 100% |
+| 123 | 500.00 | 500.00 | 100% |
+| 456 | 455.47 | 124.77 | 82% |
+| 789 | 228.37 | 60.32 | 0% |
+| 2026 | 500.00 | 88.72 | 100% |
+
+**Aggregate statistics across five independent training runs:**
+
+- Best-checkpoint mean return: 436.77
+- Best-checkpoint sample standard deviation: 118.08
+- Final-checkpoint mean return: 186.38
+- Final-checkpoint sample standard deviation: 179.15
+- Mean paired improvement: 250.39 reward points
+- Best-checkpoint aggregate success rate: 76.4%
+- Final-checkpoint aggregate success rate: 20.0%
+- Runs achieving a 100% success rate with best checkpoints: 3/5
+
+Success is defined as reaching the CartPole-v1 maximum episode return of 500.
+
+### Analysis
+
+The results demonstrate considerable sensitivity to the random seed used during DQN training.
+
+Three training runs (seeds 42, 123, and 2026) produced validation-selected controllers that reached the maximum return in all 100 independent test episodes.
+
+Seed 456 produced a partially successful controller with a mean return of 455.47 and an 82% success rate.
+
+Seed 789 produced a weaker controller, with a mean return of 228.37 and no episodes reaching the maximum return.
+
+Validation-selected checkpoints outperformed final checkpoints in four runs and matched the final checkpoint in one run.
+
+The across-run mean return increased from 186.38 for final checkpoints to 436.77 for validation-selected checkpoints.
+
+This corresponds to an approximately 2.34-fold increase in mean evaluated performance.
+
+The performance differences indicate that additional training does not necessarily preserve previously acquired control capabilities. Periodic model evaluation and checkpoint preservation substantially improve the reliability of the retained models under the tested conditions.
+
+### Conclusion
+
+The study provides evidence that the implemented DQN algorithm can learn successful CartPole-v1 control policies across multiple independent training seeds.
+
+However, training outcomes remain variable, and successful convergence is not guaranteed.
+
+Validation-based checkpoint selection is an effective practical method for preserving strong intermediate policies. It improved independent test performance in four of five runs and never performed worse than the final checkpoint in this study.
+
+The results support the inclusion of independent validation and checkpoint management in reinforcement learning experiments.
+
+### Limitations
+
+- Only five independent training seeds were evaluated.
+- All runs used the same algorithm configuration.
+- Checkpoints were selected using a fixed set of 20 validation initial conditions.
+- Independent testing used 100 fixed initial conditions.
+- CartPole-v1 is a relatively simple simulated environment.
+- The results do not establish robustness under external disturbances, observation noise, model uncertainty, or alternative system dynamics.
+- Observed maximum returns are limited by the environment's 500-step episode horizon.
+
+### Future Work
+
+Investigate controller robustness to altered initial conditions and observation disturbances. Compare the original DQN against algorithmic improvements such as Double DQN only if a controlled comparison is warranted.
