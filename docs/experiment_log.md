@@ -122,3 +122,70 @@ However, evaluation returns were concentrated between 94 and 103, substantially 
 The evaluation used one trained DQN checkpoint and 100 held-out environment seeds. Multiple independent training runs are necessary to assess the reliability of the learning algorithm.
 
 The narrow distribution of DQN returns should also be investigated to determine whether the learned policy consistently fails at a similar point in each episode.
+
+
+## EXP-004 — DQN Controller Behavior Analysis
+
+### Objective
+
+Investigate why the trained DQN achieves episode returns concentrated around 100 steps despite significantly outperforming a random policy.
+
+### Method
+
+- Environment: CartPole-v1
+- Controller: Trained DQN, greedy policy (epsilon = 0)
+- Checkpoint: `results/checkpoints/dqn_final.pt`
+- Evaluation seeds: 10000, 10025, 10050
+- Simulation time step: 0.02 s
+- Recorded signals: Cart position, cart velocity, pole angle, pole angular velocity, and control action
+
+### Analysis
+
+The controller will be examined for:
+
+1. Pole-angle instability.
+2. Cart-position drift.
+3. Oscillatory control decisions.
+4. Consistency of termination causes across initial conditions.
+
+### Results
+
+Three deterministic evaluation episodes were analyzed using the trained DQN checkpoint.
+
+| Seed | Episode return | Duration | Termination reason |
+|---|---:|---:|---|
+| 10000 | 99 | 1.98 s | Cart position boundary |
+| 10025 | 96 | 1.92 s | Cart position boundary |
+| 10050 | 99 | 1.98 s | Cart position boundary |
+
+### Observations
+
+**Cart position and velocity:** All three trajectories exhibit progressive rightward cart drift. The cart position eventually exceeds the +2.4 m termination boundary. Cart velocity remains predominantly positive during the later stages of each episode.
+
+**Pole angle:** The controller maintains the pole angle within the ±12° termination boundaries. Following an initial increase to approximately +11°, the angle decreases and subsequently remains around +5° to +10°.
+
+**Control actions:** The DQN frequently alternates between left and right actions. While these corrections help constrain the pole angle, they do not sufficiently reduce cart velocity or prevent horizontal drift.
+
+**Consistency:** All three episodes exhibit the same failure mechanism, explaining the narrow distribution of returns observed during EXP-003.
+
+### Conclusion
+
+The trained DQN demonstrates partial stabilization of the CartPole system but fails to regulate the complete system state.
+
+Specifically, the policy prevents pole-angle divergence during the analyzed trajectories while allowing positive cart velocity and horizontal displacement to accumulate.
+
+The resulting cart-position constraint violation terminates episodes after approximately 100 simulation steps.
+
+This behavior suggests that the learned policy is incomplete rather than that the DQN implementation necessarily contains an error.
+
+### Next Steps
+
+1. Preserve the initial trained checkpoint as a reference.
+2. Extend training while keeping the algorithm and hyperparameters unchanged.
+3. Evaluate the new checkpoint using the same held-out seeds.
+4. Compare episode returns and termination mechanisms.
+5. Investigate alternative training configurations only if necessary.
+
+### Limitations
+
+Only three selected trajectories were inspected. The findings establish a consistent failure mechanism for these episodes but do not establish that every evaluation episode terminates for the same reason.
