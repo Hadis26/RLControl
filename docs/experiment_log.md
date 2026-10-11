@@ -457,12 +457,50 @@ Although the selected DQN achieves the maximum return under nominal CartPole-v1 
 
 ### Results
 
-Pending execution.
+**Observation-noise sensitivity**
+
+| Noise σ | Mean return | Success rate |
+|---|---:|---:|
+| 0.000 | 500.00 | 100% |
+| 0.010 | 474.61 | 92% |
+| 0.025 | 333.66 | 46% |
+| 0.050 | 194.71 | 4% |
+| 0.100 | 65.75 | 0% |
+
+The controller achieved maximum performance without observation noise but exhibited substantial performance degradation as observation noise increased.
+
+**Initial-condition sensitivity**
+
+The controller was evaluated on a grid of 25 initial conditions involving five cart positions and five pole angles, with both initial velocities fixed at zero.
+
+- Successful conditions (return = 500): 15/25
+- Grid success rate: 60%
+- All five initial angles at zero cart displacement achieved maximum returns.
+- The lowest observed return was 11, occurring at (+0.75 m, +10°) and (+1.50 m, +10°).
 
 ### Analysis
 
-To be completed after inspecting the noise-sensitivity plot and initial-condition heatmap.
+The results demonstrate that nominal performance does not guarantee robust performance.
+
+Observation noise strongly affects the learned controller. While small perturbations (σ = 0.01) result in relatively modest performance deterioration, larger observation noise causes significant reductions in episode return and success rate.
+
+The initial-condition analysis also reveals sensitivity to the starting configuration. The controller performs well near the center of the permitted cart-position range but can fail quickly for particular combinations of cart displacement and pole angle.
+
+These findings indicate that the controller's successful behavior is dependent on the operating conditions.
+
+### Conclusion
+
+The validation-selected DQN achieves perfect performance under the standard CartPole-v1 evaluation protocol but demonstrates limited robustness to observation noise and selected nonstandard initial conditions.
+
+The results emphasize the distinction between nominal task completion and controller robustness.
+
+Further work could investigate observation-noise augmentation during training, state-dependent noise models, and domain randomization.
 
 ### Limitations
 
-The observation-noise standard deviation is identical numerically across state components with different physical units. The initial-condition analysis covers a discrete grid, not the full state space. No physical disturbances or changes to the environment dynamics are introduced.
+- Noise was applied to observations rather than physical dynamics.
+- Noise standard deviations were identical numerically across variables with different units.
+- Robustness was evaluated using one trained policy.
+- Initial-condition analysis used only 25 discrete configurations.
+- Initial velocities were fixed at zero.
+- No formal stability or region-of-attraction guarantees were established.
