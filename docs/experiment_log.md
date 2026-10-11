@@ -189,3 +189,69 @@ This behavior suggests that the learned policy is incomplete rather than that th
 ### Limitations
 
 Only three selected trajectories were inspected. The findings establish a consistent failure mechanism for these episodes but do not establish that every evaluation episode terminates for the same reason.
+
+## EXP-005 — Extended DQN Training
+
+### Objective
+
+Investigate whether increasing the training duration from 600 to 1,200 episodes improves the DQN controller's performance and stability.
+
+### Hypothesis
+
+Additional environment interactions may allow the agent to develop a more effective control strategy, improving cart-position regulation and extending episode duration.
+
+### Experimental Setup
+
+The DQN architecture, learning rate, discount factor, replay buffer, batch size, target-update frequency, exploration schedule, and random seed were kept unchanged from EXP-002.
+
+Only the number of training episodes was increased from 600 to 1,200.
+
+- Environment: CartPole-v1
+- Algorithm: DQN
+- Training episodes: 1,200
+- Training seed: 42
+- Total environment interactions: 136,904
+- Evaluation episodes: 100
+- Evaluation seeds: 10000–10099
+- Evaluation policy: Greedy (epsilon = 0)
+
+### Results
+
+| Metric | EXP-002 (600) | EXP-005 (1200) |
+|---|---:|---:|
+| Final training mean (20 episodes) | 114.85 | 46.30 |
+| Mean evaluation return | 98.63 | 154.16 |
+| Evaluation standard deviation | 1.88 | 47.18 |
+| Minimum evaluation return | 94 | 117 |
+| Maximum evaluation return | 103 | 230 |
+
+The extended-training checkpoint achieved approximately 56.3% higher mean evaluation return than the original 600-episode checkpoint.
+
+### Observations
+
+The training process exhibited substantial instability.
+
+Around episodes 800–840 and 940–960, the agent achieved high returns, including episodes reaching the maximum return of 500. The reported 20-episode moving average reached 457.85 at episode 940.
+
+However, these improvements were not maintained. Performance subsequently declined, with the final 20-episode mean reaching only 46.30 at episode 1200.
+
+Despite this deterioration in training performance, the final greedy policy achieved a higher held-out evaluation return than the original 600-episode policy.
+
+### Conclusion
+
+Extending training improved final greedy-policy evaluation performance but did not produce stable convergence.
+
+The results demonstrate that a longer training run does not necessarily result in consistently better policies.
+
+Periodic checkpointing and independent validation are therefore necessary to identify strong intermediate policies and avoid relying exclusively on the final training checkpoint.
+
+### Limitations
+
+- Only one training seed was used.
+- Intermediate checkpoints were not saved.
+- The episodes responsible for high training returns were not independently evaluated using greedy action selection.
+- The underlying cause of the observed learning instability has not been established.
+
+### Next Steps
+
+Implement periodic checkpoint saving, validation-based model selection, and independent final testing. Preserve the original DQN algorithm to provide a controlled comparison.
